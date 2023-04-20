@@ -7,7 +7,10 @@ const {
     blockUser,
     addLocation,
     getLocation,
-    deleteLocation
+    deleteLocation,
+    getReports,
+    reportSingle,
+    deleteReportedPost
 } = require('../controller/adminController');
 
 router.post("/login",adminLogin);
@@ -16,6 +19,9 @@ router.get('/blockuser/:id', blockUser);
 router.post("/addLocation", addLocation);
 router.get("/getLocation",getLocation);
 router.delete("/deleteLocation/:id",deleteLocation);
+router.get("/getReports",getReports);
+router.get("/reportSingle/:id",reportSingle);
+router.delete("/deleteReportedPost/:id/:rid",deleteReportedPost);
 
 
 

@@ -10,7 +10,10 @@ const {
     resetPassword,
     addBio,
     editProfile,
-    profileImage
+    profileImage,
+    followersDetails,
+    followUser,
+    searchChat
 } = require('../controller/userController');
 const { verify } = require('../middlewares/userVerification');
 
@@ -23,4 +26,8 @@ router.post("/user/restPassword",resetPassword);
 router.put("/user/addBio/:id",verify, addBio);
 router.put("/user/editProfile/:id",verify,editProfile);
 router.post("/user/profileImage",verify,uploadImage,profileImage);
+router.get("/user/followersDetails/:id", followersDetails);
+router.put("/user/followUser/:id", followUser);
+router.get("/user/searchChat",verify,searchChat);
+
 module.exports = router;

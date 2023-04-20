@@ -3,6 +3,7 @@ const userOTPData = require('../models/OTPModel');
 const { sendOTPVerificationMail } = require("../utils/otpMailer");
 const jwt = require('jsonwebtoken');
 require("dotenv").config();
+const mongoose = require('mongoose');
 
 const {
     hashPassword,
@@ -23,6 +24,7 @@ exports.homePage = async (req, res) => {
 exports.register = async (req, res) => {
     try {
         const { userName, fullName, email, phone, password } = req.body;
+        console.log("Otpppp", userName, fullName, email, phone, password)
         const regx = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         if (!userName || !fullName || !email || !phone || !password) {
             return res.json({ status: "1err" });
@@ -201,7 +203,7 @@ exports.editProfile = async (req, res) => {
         const { fullName, phone, bio } = req.body;
         const id = req.params.id;
         console.log(req.body);
-        console.log("editile id",id);
+        console.log("editile id", id);
         await userData.updateOne({ _id: id }, {
             $set: {
                 fullName,
@@ -228,9 +230,68 @@ exports.profileImage = async (req, res) => {
 
     const user = await userData.findOne({ _id: id });
 
-    res.send({ proImage: true, user});
+    res.send({ proImage: true, user });
+}
+
+exports.followersDetails = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const followI = req.headers["x-custom-header"];
+        const followId = new mongoose.Types.ObjectId(followI);
+        const exist = await userData.findOne({ _id: followId });
+        const count = exist.followers.length;
 
 
+        if (exist.followers.includes(userId)) {
+            res.status(200).json({ status: true, count });
+        } else {
+            res.status(200).json({ status: false, count });
+        }
+    } catch (error) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+};
 
+exports.followUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log("IDDD",id);
+        const userI = req.body.userId;
+        console.log("UserIIIIII",userI);
+        const userId = new mongoose.Types.ObjectId(userI);
+        console.log("USerIDddd",userId);
+        const exist = await userData.findById(id);
 
+        console.log("Follow aakam",exist);
+
+        if (!exist.followers.includes(userId)) {
+            await userData.findByIdAndUpdate(id, { $push: { followers: userId } });
+            res.status(200).json({ status: "ok" });
+          } else {
+            await userData.findByIdAndUpdate(id, { $pull: { followers: userId } });
+            res.status(200).json({ status: "ok" });
+          }
+    } catch (error) {
+        res.status(401).json({err:'catchErr'});
+    }
+}
+
+exports.searchChat = async (req, res) => {
+    const keyword = req.query.search ? {
+        $or: [
+            {
+                fullName: { $regex: req.query.search, $options: "i" },
+            },
+            {
+                email: { $regex: req.query.search, $options: "i" }
+            }
+        ]
+    }
+    : {};
+    console.log("Search cheyyumbo",req.id);
+    const users = await userData.find(keyword);
+    const filteredUsers = users.filter(user => user._id != req.id);
+    res.send(filteredUsers);
+    // const users = await (await userData.find(keyword)).findIndex({ _id: { $ne: req.id }});
+    // res.send(users);
 }

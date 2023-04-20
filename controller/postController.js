@@ -1,6 +1,10 @@
 const postData = require("../models/postModel");
 const userData = require("../models/userModel");
 const locationData = require("../models/locationModel");
+const likeData = require("../models/likeModel");
+const commentData = require("../models/commentModel");
+const reportData = require("../models/reportModel");
+const mongoose = require('mongoose');
 
 exports.addPost = async (req, res) => {
     try {
@@ -32,9 +36,7 @@ exports.addPost = async (req, res) => {
 }
 
 exports.getPosts = async (req, res) => {
-    console.log("Try'nte mele");
     try {
-        console.log("Vanthitta");
         const postDatas = await postData.aggregate([
             {
                 $sort: {
@@ -53,14 +55,10 @@ exports.getPosts = async (req, res) => {
                 $unwind: "$userDetails"
             }
         ])
-
-        console.log(postDatas);
-        res.send({postDatas});
+        res.send({ postDatas });
     } catch (error) {
 
     }
-    // const posts = await postData.find().sort({ updatedAt: -1 });;
-    // res.send({posts});
 }
 
 exports.getLocationPost = (req, res) => {
@@ -72,3 +70,182 @@ exports.getLocationPost = (req, res) => {
         console.log(error);
     }
 }
+
+exports.singlePost = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const postId = new mongoose.Types.ObjectId(id);
+        const post = await postData.aggregate([
+            {
+                $match: {
+                    _id: postId
+                }
+            },
+            {
+                $sort: {
+                    updatedAt: -1
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "details"
+                }
+            }
+        ]);
+        res.status(200).json({ post });
+    } catch (err) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+};
+
+exports.likePost = async (req, res) => {
+    try {
+        const user = req.body.user;
+        const userId = new mongoose.Types.ObjectId(user);
+        console.log("Like cheyyumbo userId", userId);
+        const post = req.params.id;
+        const postId = new mongoose.Types.ObjectId(post);
+
+        const postLike = await likeData.findOne({
+            $and: [{ userId: { $eq: userId } }, { postId: { $eq: postId } }],
+        })
+
+        if (postLike) {
+            await likeData.findOneAndDelete({
+                $and: [{ userId: { $eq: userId } }, { postId: { $eq: postId } }]
+            });
+            res.status(200).json({ status: false });
+        } else {
+            const likes = new likeData({
+                userId,
+                postId,
+                like: true,
+            });
+            await likes.save();
+            res.status(200).json({ status: true });
+        }
+    } catch (error) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.getLikeDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const postId = new mongoose.Types.ObjectId(id);
+        const user = req.headers["x-custom-header"];
+        const userId = new mongoose.Types.ObjectId(user);
+
+        const likes = await likeData.find({
+            userId,
+            postId,
+            like: true
+        });
+
+        if (likes) {
+            res.status(200).json({ likes });
+        }
+    } catch (err) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.commentPost = async (req, res) => {
+    try {
+        const { user, comment } = req.body;
+        console.log("Comment user", user);
+        console.log("Comment ", comment);
+
+        const userId = new mongoose.Types.ObjectId(user);
+        console.log("UserId kitty poolum", userId);
+        const post = req.params.id;
+        console.log("params id", post)
+        const postId = new mongoose.Types.ObjectId(post);
+        console.log("postId kitty poolum", postId);
+        const isExist = await commentData.findOne({
+            $and: [{ userId: { $eq: userId } }, { postId: { $eq: postId } }],
+        });
+
+
+        if (isExist) {
+            const addToExist = await commentData.findOneAndUpdate(
+                {
+                    $and: [{ userId: { $eq: userId } }, { postId: { $eq: postId } }]
+                },
+                { $push: { comment: comment } }
+            );
+            res.status(200).send(addToExist);
+        } else {
+            const comments = new commentData({
+                userId,
+                postId,
+                comment,
+            });
+            await comments.save();
+            res.status(200).send(comments);
+        }
+    } catch (error) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.postComments = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const postId = new mongoose.Types.ObjectId(id);
+        const data = await commentData.aggregate([
+            {
+                $match: {
+                    postId,
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "details"
+                }
+            }
+        ])
+
+        res.status(200).json({ data });
+
+    } catch (err) {
+        res.status(401).json({ err: 'catchErr' });
+    }
+}
+
+exports.reportPost = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const { postedUser, reportedUser, report } = req.body;
+
+        if (!postId || !postedUser || !reportedUser) {
+            return res.json({ status: "wrongErr" });
+        }
+
+        if (!report) {
+            return res.json({ status: "inputErr" });
+        }
+        const data = new reportData({
+            postId,
+            userId: postedUser,
+            reportedUser,
+            report,
+        });
+        await data.save();
+        res.status(200).json({ status: "ok" });
+    } catch (err) {
+        res.status(401).json({err:'catchErr'})
+    }
+}
+

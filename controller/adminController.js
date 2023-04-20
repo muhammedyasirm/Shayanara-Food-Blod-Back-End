@@ -2,11 +2,13 @@ const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const User = require("../models/userModel");
 const locationData = require("../models/locationModel");
+const reportData = require("../models/reportModel");
+const postData = require("../models/postModel");
+const mongoose = require('mongoose');
 
 exports.adminLogin = (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log("Id and password")
         if (email === process.env.ADMIN_NAME && password === process.env.ADMIN_PASSWORD) {
             let payload = {
                 admin: email
@@ -33,10 +35,15 @@ exports.adminLogin = (req, res) => {
     }
 }
 
-exports.getUser = (req, res) => {
+exports.getUser = async (req, res) => {
     try {
-        User.find().then((userdata) => {
-            res.send({ userdata });
+        const page = parseInt(req.query.page);
+        const size = parseInt(req.query.size);
+        const total = await User.countDocuments();
+        const skip = (page - 1) * size;
+
+        User.find().skip(skip).limit(size).then((userdata) => {
+            res.send({ userdata, total, page, size });
         });
     } catch (err) {
         console.log(err);
@@ -95,11 +102,68 @@ exports.getLocation = (req, res) => {
 exports.deleteLocation = async (req, res) => {
     try {
         const id = req.params.id;
-        console.log("Location delete id", id);
         await locationData.findByIdAndDelete(id);
         res.json({ message: 'Location deleted' });
     } catch (error) {
         console.log(error)
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+exports.getReports = async (req, res) => {
+    try {
+        const data = await reportData
+            .find({})
+            .sort({ createdAt: -1 })
+        res.status(200).json({ data });
+    } catch (error) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.reportSingle = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const postId = new mongoose.Types.ObjectId(id);
+        const post = await postData.aggregate([
+            {
+                $match: {
+                    _id: postId
+                }
+            },
+            {
+                $sort: {
+                    updatedAt: -1
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "details"
+                }
+            }
+        ]);
+        res.status(200).json({ post });
+    } catch (error) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.deleteReportedPost = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const postId = new mongoose.Types.ObjectId(id);
+        const rid = req.params.rid;
+        // const reportId = new mongoose.Types.ObjectId(rid);
+
+        postData.findByIdAndDelete(postId).then(() => {
+            reportData.deleteOne({_id:rid}).then(() => {
+                res.json({ message: 'Post and Report deleted' });
+            })})
+    } catch (error) {
+        console.log(error);
         res.status(500).json({ message: 'Server error' });
     }
 }
