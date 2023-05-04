@@ -34,6 +34,7 @@ module.exports = (req, res, next) => {
       
         return res.send({ err: "Selected file is not an image" });
     }
+    console.log(req.file)
     return next();   
   });
 };

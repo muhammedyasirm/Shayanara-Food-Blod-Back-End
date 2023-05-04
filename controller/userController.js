@@ -1,9 +1,13 @@
 const userData = require('../models/userModel');
 const userOTPData = require('../models/OTPModel');
+const recipeData = require('../models/recipeModel');
+const recipeCommentData = require('../models/recipeCommentModel');
 const { sendOTPVerificationMail } = require("../utils/otpMailer");
 const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const mongoose = require('mongoose');
+const instance = require('../middlewares/razorpay');
+const crypto = require("crypto")
 
 const {
     hashPassword,
@@ -202,8 +206,6 @@ exports.editProfile = async (req, res) => {
     try {
         const { fullName, phone, bio } = req.body;
         const id = req.params.id;
-        console.log(req.body);
-        console.log("editile id", id);
         await userData.updateOne({ _id: id }, {
             $set: {
                 fullName,
@@ -221,7 +223,6 @@ exports.editProfile = async (req, res) => {
 exports.profileImage = async (req, res) => {
     const profileImage = req.file.path;
     const id = req.id;
-    console.log(profileImage);
     await userData.findByIdAndUpdate({ _id: id }, {
         $set: {
             profilePic: profileImage
@@ -255,24 +256,20 @@ exports.followersDetails = async (req, res) => {
 exports.followUser = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log("IDDD",id);
         const userI = req.body.userId;
-        console.log("UserIIIIII",userI);
         const userId = new mongoose.Types.ObjectId(userI);
-        console.log("USerIDddd",userId);
         const exist = await userData.findById(id);
 
-        console.log("Follow aakam",exist);
 
         if (!exist.followers.includes(userId)) {
             await userData.findByIdAndUpdate(id, { $push: { followers: userId } });
             res.status(200).json({ status: "ok" });
-          } else {
+        } else {
             await userData.findByIdAndUpdate(id, { $pull: { followers: userId } });
             res.status(200).json({ status: "ok" });
-          }
+        }
     } catch (error) {
-        res.status(401).json({err:'catchErr'});
+        res.status(401).json({ err: 'catchErr' });
     }
 }
 
@@ -287,11 +284,148 @@ exports.searchChat = async (req, res) => {
             }
         ]
     }
-    : {};
-    console.log("Search cheyyumbo",req.id);
+        : {};
+    console.log("Search cheyyumbo", req.id);
     const users = await userData.find(keyword);
     const filteredUsers = users.filter(user => user._id != req.id);
     res.send(filteredUsers);
     // const users = await (await userData.find(keyword)).findIndex({ _id: { $ne: req.id }});
     // res.send(users);
+}
+
+exports.singleRecipe = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const recipeId = new mongoose.Types.ObjectId(id);
+        const recipe = await recipeData.aggregate([
+            {
+                $match: {
+                    _id: recipeId
+                }
+            },
+            {
+                $sort: {
+                    updatedAt: -1
+                }
+            }
+        ]);
+
+        res.status(200).json({ recipe });
+
+    } catch (err) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.postRecipeComent = async (req, res) => {
+    try {
+        const { user, comment } = req.body;
+        const userId = new mongoose.Types.ObjectId(user);
+        const recipe = req.params.id;
+        const recipeId = new mongoose.Types.ObjectId(recipe);
+        const isExist = await recipeCommentData.findOne({
+            $and: [{ userId: { $eq: userId } }, { recipeId: { $eq: recipeId } }]
+        });
+        if (isExist) {
+            const addToExist = await recipeCommentData.findOneAndUpdate(
+                {
+                    $and: [{ userId: { $eq: userId } }, { recipeId: { $eq: recipeId } }]
+                },
+                { $push: { comment: comment } }
+            );
+            res.status(200).send(addToExist);
+        } else {
+            const comments = new recipeCommentData({
+                userId,
+                recipeId,
+                comment
+            });
+            await comments.save();
+            res.status(200).send(comments);
+        }
+    } catch (err) {
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.recipeComments = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const recipeId = new mongoose.Types.ObjectId(id);
+        console.log("recipeId", recipeId);
+        const data = await recipeCommentData.aggregate([
+            {
+                $match: {
+                    recipeId
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "details"
+                }
+            }
+        ]);
+        res.status(200).json({ data });
+    } catch (err) {
+        res.status(401).json({ err: 'catchErr' });
+    }
+}
+
+exports.postPayment = (req, res) => {
+    const id = req.id;
+    const price = req.body.price;
+    const options = {
+        amount: price * 100,
+        currency: "INR",
+        // eslint-disable-next-line prefer-template
+        receipt: "" + id,
+    };
+    instance.orders.create(options, (err, order) => {
+        if (err) {
+            console.log(err);
+            res.status(400).json({
+                success: false,
+                err,
+            });
+        } else {
+            res.status(200).json({ order: order });
+        }
+    });
+}
+
+exports.verifyPayment = async (req, res) => {
+    try {
+        console.log("Ethipoyi")
+        const id = req.id;
+        const userId =  new mongoose.Types.ObjectId(id);
+        console.log(userId)
+        console.log(id)
+        let hmac = crypto.createHmac("sha256",process.env.KEYSECRET);
+        console.log("hmac:"+ hmac)
+        hmac.update(
+            `${req.body.payment.razorpay_order_id}|${req.body.payment.razorpay_payment_id}`
+        );
+        hmac = hmac.digest("hex");
+       const change =  await userData.updateOne({ _id: userId },
+            {
+                $set: {
+                    premium: true,
+                },
+            }
+        );
+        console.log(change)
+        const user = await userData.findOne({ _id: userId });
+        res.send({ proPremium: true, user });
+    } catch (err) {
+        console.log(err)
+        res.status(401).json({ err: 'catchErr' });
+    }
 }

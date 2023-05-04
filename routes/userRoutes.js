@@ -13,7 +13,12 @@ const {
     profileImage,
     followersDetails,
     followUser,
-    searchChat
+    searchChat,
+    singleRecipe,
+    postRecipeComent,
+    recipeComments,
+    postPayment,
+    verifyPayment
 } = require('../controller/userController');
 const { verify } = require('../middlewares/userVerification');
 
@@ -29,5 +34,11 @@ router.post("/user/profileImage",verify,uploadImage,profileImage);
 router.get("/user/followersDetails/:id", followersDetails);
 router.put("/user/followUser/:id", followUser);
 router.get("/user/searchChat",verify,searchChat);
+router.get('/user/getSingleView/:id',verify,singleRecipe);
+router.post('/user/postRecipeComment/:id',postRecipeComent);
+router.get('/user/getRecipeComment/:id',recipeComments);
+router.post('/user/premium',verify,postPayment);
+router.post('/user/verifyPayment',verify,verifyPayment);
+
 
 module.exports = router;

@@ -11,18 +11,21 @@ const {
     likePost,
     commentPost,
     postComments,
-    reportPost
+    reportPost,
+    deletePost
 } = require('../controller/postController');
 
 router.post("/users/addPost/:id", verify, addPost);
-router.get('/users/getPosts',verify,getPosts);
-router.get('/post/getLocation',verify,getLocationPost);
+router.get('/users/getPosts',getPosts);
+router.get('/post/getLocation',getLocationPost);
 router.get('/users/getSingleView/:id',verify,singlePost);
 router.get("/user/getLikeDetails/:id", getLikeDetails);
 router.post("/user/likePost/:id", likePost);
 router.post("/user/commentPost/:id", commentPost);
 router.get("/user/postComments/:id",postComments);
 router.post('/user/reportPost/:id', reportPost);
+router.delete('/user/deletePost/:id',deletePost);
+
 
 module.exports = router;
 

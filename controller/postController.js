@@ -73,8 +73,11 @@ exports.getLocationPost = (req, res) => {
 
 exports.singlePost = async (req, res) => {
     try {
+        console.log(req.params);
         const { id } = req.params;
+        console.log("iddd",id);
         const postId = new mongoose.Types.ObjectId(id);
+        console.log("Post iddd".postId);
         const post = await postData.aggregate([
             {
                 $match: {
@@ -98,6 +101,7 @@ exports.singlePost = async (req, res) => {
         res.status(200).json({ post });
     } catch (err) {
         res.status(401).json({ err: 'catchErr' })
+        console.log("nere ingoot");
     }
 };
 
@@ -156,15 +160,10 @@ exports.getLikeDetails = async (req, res) => {
 exports.commentPost = async (req, res) => {
     try {
         const { user, comment } = req.body;
-        console.log("Comment user", user);
-        console.log("Comment ", comment);
 
         const userId = new mongoose.Types.ObjectId(user);
-        console.log("UserId kitty poolum", userId);
         const post = req.params.id;
-        console.log("params id", post)
         const postId = new mongoose.Types.ObjectId(post);
-        console.log("postId kitty poolum", postId);
         const isExist = await commentData.findOne({
             $and: [{ userId: { $eq: userId } }, { postId: { $eq: postId } }],
         });
@@ -246,6 +245,22 @@ exports.reportPost = async (req, res) => {
         res.status(200).json({ status: "ok" });
     } catch (err) {
         res.status(401).json({err:'catchErr'})
+    }
+}
+
+exports.deletePost = async (req,res) => {
+    console.log("ivde vare ethi")
+    try {
+        const pid = req.params.id;
+        console.log("piddd",pid);
+        const postId = new mongoose.Types.ObjectId(pid);
+        console.log("postIddd",postId);
+
+        await postData.findByIdAndDelete(postId);
+        res.json({ message: 'Post and Report deleted' });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Server error' });
     }
 }
 

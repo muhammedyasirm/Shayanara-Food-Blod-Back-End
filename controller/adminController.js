@@ -5,6 +5,8 @@ const locationData = require("../models/locationModel");
 const reportData = require("../models/reportModel");
 const postData = require("../models/postModel");
 const mongoose = require('mongoose');
+const recipeData = require('../models/recipeModel');
+const bannerData = require('../models/bannerModel');
 
 exports.adminLogin = (req, res) => {
     try {
@@ -164,6 +166,118 @@ exports.deleteReportedPost = async (req, res) => {
             })})
     } catch (error) {
         console.log(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+exports.deleteReport = async (req,res) => {
+    try {
+        const rid = req.params.rid;
+        const reportId = new mongoose.Types.ObjectId(rid);
+
+        await reportData.findByIdAndDelete(reportId);
+        res.json({ message: 'Post and Report deleted' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+exports.postRecipe = async (req,res) => {
+    try {
+        const { recipeName, category, serves, ingredients, instructions, description} = req.body;
+        console.log(req.body);
+        const recipeImage = req.file.path;
+        if(!recipeName || !recipeName || !serves || !ingredients || !instructions || !recipeImage || !description) {
+            res.json({ status: "emptyErr" });
+        } else {
+            const recipe = new recipeData({
+                recipeName: recipeName,
+                recipeCategory: category,
+                recipeServes: serves,
+                recipeIngredients: ingredients,
+                recipeInstruction: instructions,
+                recipeDescription: description,
+                recipeImage: {
+                    url: recipeImage
+                }
+            });
+            await recipe.save();
+            res.status(200).send(recipe);
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+exports.getRecipe = async ( req, res ) => {
+    try {
+        const data = await recipeData
+        .find({})
+        .sort({ cretedAt: -1});
+        res.status(200).json({ data });
+    } catch (err) {
+        console.log(err);
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.addBanner = async (req, res) => {
+    try {
+        console.log("Req.body",req.body);
+        const { bannerName, foodName, hotelName, offer} = req.body;
+        const imageFile = req.file.path;
+        console.log("imageFile" , imageFile);
+        if(!bannerName || !foodName || !hotelName || !offer || !imageFile){
+            res.json({ status: "emptyErr" });
+        } else {
+            const banner = new bannerData({
+                bannerName,
+                foodName,
+                hotelName,
+                offer,
+                imageFile: {
+                    url: imageFile
+                }
+            });
+            await banner.save();
+            res.status(200).send(banner);
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+exports.getBanner = async ( req, res ) => {
+    try {
+        const data = await bannerData.find({}).sort({ createdAt: -1});
+        res.status(200).json({ data });
+    } catch (err) {
+        console.log(err);
+        res.status(401).json({ err: 'catchErr' })
+    }
+}
+
+exports.deleteBanner = async(req, res) => {
+    try {
+        const id = req.params.id;
+        await bannerData.findByIdAndDelete(id);
+        res.json({ message: 'Banner deleted'});
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ message: 'Server error' });
+    }
+}  
+
+exports.deleteRecipe = async(req, res) => {
+    try {
+        const id = req.params.id;
+        await recipeData.findByIdAndDelete(id);
+        res.json({ message: 'Recipe Deleted'})
+    } catch (error) {
+        console.log(error)
         res.status(500).json({ message: 'Server error' });
     }
 }
