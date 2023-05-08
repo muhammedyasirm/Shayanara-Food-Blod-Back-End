@@ -11,6 +11,7 @@ const adminRouter = require('./routes/adminRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const path = require('path');
+require("dotenv").config();
 
 app.use(cors())
 app.use(bodyParser.urlencoded({extended: true}));
