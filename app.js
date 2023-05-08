@@ -10,7 +10,7 @@ const postRouter = require('./routes/postRoutes');
 const adminRouter = require('./routes/adminRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
-const path = require('path');
+// const path = require('path');
 require("dotenv").config();
 
 app.use(cors())
@@ -24,17 +24,17 @@ app.use('/backend/message',messageRoutes);
 
 //-----------------Deployment---------------------
 
-const __dirname1 = path.resolve();
-if(process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname1,"/frontend/build")))
-    app.get('*',(req,res) => {
-        res.sendFile(path.resolve(__dirname1,"frontend","build","index.html"));
-    })
-} else {
-    app.get("/backend",(req,res) => {
-        res.send("API is running successfully");
-    });
-}
+// const __dirname1 = path.resolve();
+// if(process.env.NODE_ENV === 'production') {
+//     app.use(express.static(path.join(__dirname1,"/frontend/build")))
+//     app.get('*',(req,res) => {
+//         res.sendFile(path.resolve(__dirname1,"frontend","build","index.html"));
+//     })
+// } else {
+//     app.get("/backend",(req,res) => {
+//         res.send("API is running successfully");
+//     });
+// }
 
 //-----------------Deployment----------------------
 
