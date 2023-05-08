@@ -16,11 +16,17 @@ require("dotenv").config();
 app.use(cors())
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
-app.use('/backend',userRouter);
-app.use('/backend',postRouter);
-app.use('/backend/admin',adminRouter);
-app.use('/backend/chat',chatRoutes);
-app.use('/backend/message',messageRoutes);
+// app.use('/backend',userRouter);
+// app.use('/backend',postRouter);
+// app.use('/backend/admin',adminRouter);
+// app.use('/backend/chat',chatRoutes);
+// app.use('/backend/message',messageRoutes);
+
+app.use('/',userRouter);
+app.use('/',postRouter);
+app.use('/admin',adminRouter);
+app.use('/chat',chatRoutes);
+app.use('/message',messageRoutes);
 
 //-----------------Deployment---------------------
 
@@ -50,6 +56,7 @@ const io = require('socket.io')(server, {
     pingTimeout: 60000,
     cors: {
         origin: "https://shayanara.online"
+        //origin: "http://localhost:3000"
     }
 });
 
