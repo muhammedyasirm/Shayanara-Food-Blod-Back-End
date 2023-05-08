@@ -49,7 +49,7 @@ const server = app.listen(port, () => console.log(`app listening on port ${port}
 const io = require('socket.io')(server, {
     pingTimeout: 60000,
     cors: {
-        origin: "https://shayanara.online/backend"
+        origin: "https://shayanara.online"
     }
 });
 
